@@ -28,12 +28,14 @@
 #ifndef MIN_MAX_H_
 #define MIN_MAX_H_
 
+#include <algorithm>
+
 class MinMax {
-    float input;
-    float min;
-    float max;
-    float value;
-    bool firstPass;
+    float _input;
+    float _min;
+    float _max;
+    float _value;
+    bool _firstPass;
 
   public:
     MinMax() {
@@ -41,46 +43,46 @@ class MinMax {
     }
 
     void reset() {
-      input = min = max = value = 0;
-      firstPass = true;
+      _input = _min = _max = _value = 0;
+      _firstPass = true;
     }
 
     void adapt(float lop) {
-      lop = constrain(lop, 0, 1);
+      lop = std::min(std::max(lop, 0.f), 1.f);
       lop = lop * lop;
 
-      min += (input - min) * lop;
-      max += (input - max) * lop;
+      _min += (_input - _min) * lop;
+      _max += (_input - _max) * lop;
     }
     
     float filter(float f) {
 
-      input = f;
+      _input = f;
 
-      if ( firstPass ) {
-        firstPass = false;
-        min = f;
-        max = f;
+      if ( _firstPass ) {
+        _firstPass = false;
+        _min = f;
+        _max = f;
       } else {
-        if ( f > max ) max = f;
-        if ( f < min ) min = f;
+        if ( f > _max ) _max = f;
+        if ( f < _min ) _min = f;
       }
 
-      if ( max == min ) {
-        value = 0.5;
+      if ( _max == _min ) {
+        _value = 0.5;
       } else {
-        value = (f - min) / ( max - min);
+        _value = (f - _min) / ( _max - _min);
       }
 
-      return value;
+      return _value;
     }
 
     float getMax() {
-      return max;
+      return _max;
     }
 
     float getMin() {
-      return min;
+      return _min;
     }
 
 

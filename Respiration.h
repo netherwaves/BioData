@@ -32,6 +32,10 @@
 #include "Threshold.h"
 #include "Lop.h"
 
+#include "daisy_seed.h"
+
+using namespace daisy;
+
 #ifndef RESP_H_
 #define RESP_H_
 
@@ -39,8 +43,11 @@ class Respiration {
 
   // Analog pin the Respiration sensor is connected to.
   uint8_t _pin;
+  uint8_t _chan;
 
-  unsigned long bpmChronoStart;
+  DaisySeed *_hw;
+
+  uint32_t bpmChronoStart;
 
   MinMax respMinMax;
   Threshold respThresh;
@@ -72,12 +79,14 @@ class Respiration {
   unsigned long sampleRate;
 
   // Internal use.
-  unsigned long microsBetweenSamples;
-  unsigned long prevSampleMicros;
+  uint32_t microsBetweenSamples;
+  uint32_t prevSampleMicros;
 
 public:
   Respiration(uint8_t pin, unsigned long rate=50);   // default respiration samplerate is 50Hz
   virtual ~Respiration() {}
+
+  void Init(DaisySeed *hw, AdcChannelConfig *config, uint8_t chan);
 
   /// Resets all values.
   void reset();

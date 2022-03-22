@@ -26,6 +26,9 @@
 #ifndef LOP_H_
 #define LOP_H_
 
+#include <algorithm>
+using namespace std;
+
 class Lop {
 
   // Low-pass smoothing factor.
@@ -57,7 +60,7 @@ public:
   /// Sets smoothing factor to value in [0, 1] (lower value = smoother).
   void setSmoothing(float alpha_) {
     // Constrains the smoothing factor in [0, 1].
-    alpha = constrain(alpha_, 0, 1);
+    alpha = min(max(alpha_, 0.f), 1.f);
 
     // Rule of thumb that maps the smoothing factor to number of samples.
     nCalibration = int(2 / alpha - 1);

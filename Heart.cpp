@@ -27,6 +27,9 @@
  */
 #include "Heart.h"
 
+#include <algorithm>
+using namespace std;
+
 Heart::Heart(uint8_t pin, unsigned long rate) :
 _pin(pin),
 heartThresh(0.25, 0.4),              // if signal does not fall below (low, high) bounds than signal is ignored
@@ -37,6 +40,15 @@ heartSensorBpmLopValueMinMaxSmoothing(0.001),
 heartMinMaxSmoothing(0.1)
 {
     setSampleRate(rate);
+}
+
+void Heart::Init(DaisySeed *hw, AdcChannelConfig *adcConfig, uint8_t chan)
+{
+    _hw = hw;
+    _chan = chan;
+
+    adcConfig->InitSingle(hw->GetPin(_pin));
+    
     reset();
 }
 
@@ -52,17 +64,17 @@ void Heart::setBpmSmoothing(float smoothing)
 
 void Heart::setAmplitudeMinMaxSmoothing(float smoothing)
 {
-    heartSensorAmplitudeLopValueMinMaxSmoothing = constrain(smoothing, 0, 1);
+    heartSensorAmplitudeLopValueMinMaxSmoothing = min(max(smoothing, 0.f), 1.f);
 }
 
 void Heart::setBpmMinMaxSmoothing(float smoothing)
 {
-    heartSensorBpmLopValueMinMaxSmoothing = constrain(smoothing, 0, 1);
+    heartSensorBpmLopValueMinMaxSmoothing = min(max(smoothing, 0.f), 1.f);
 }
 
 void Heart::setMinMaxSmoothing(float smoothing)
 {
-    heartMinMaxSmoothing = constrain(smoothing, 0, 1);
+    heartMinMaxSmoothing = min(max(smoothing, 0.f), 1.f);
 }
 
 void Heart::reset() {
@@ -73,12 +85,12 @@ void Heart::reset() {
     heartSensorBpmLopValueMinMax.reset();
 
     heartSensorReading = heartSensorFiltered = heartSensorAmplitude = 0;
-    bpmChronoStart = millis();
+    bpmChronoStart = System::GetNow();
 
     bpm = 60;
     beat = false;
 
-    prevSampleMicros = micros();
+    prevSampleMicros = System::GetUs();
 
     // Perform one update.
     sample();
@@ -90,7 +102,7 @@ void Heart::setSampleRate(unsigned long rate) {
 }
 
 void Heart::update() {
-    unsigned long t = micros();
+    unsigned long t = System::GetUs();
     if (t - prevSampleMicros >= microsBetweenSamples) {
         // Perform updates.
         sample();
@@ -124,8 +136,9 @@ int Heart::getRaw() const {
 
 void Heart::sample() {
     // Read analog value if needed.
-    heartSensorReading = analogRead(_pin);  //this is a dummy read to clear the adc.  This is needed at higher sampling frequencies.
-    heartSensorReading = analogRead(_pin);
+    heartSensorReading = _hw->adc.GetFloat(_chan) * 1023.f;
+    //heartSensorReading = analogRead(_pin);  //this is a dummy read to clear the adc.  This is needed at higher sampling frequencies.
+    //heartSensorReading = analogRead(_pin);
 
     heartSensorFiltered = heartMinMax.filter(heartSensorReading);
     heartSensorAmplitude = heartMinMax.getMax() - heartMinMax.getMin();
@@ -142,7 +155,7 @@ void Heart::sample() {
     beat = heartThresh.detect(heartSensorFiltered);
 
     if ( beat ) {
-        unsigned long ms = millis();
+        uint32_t ms = System::GetNow();
         float temporaryBpm = 60000. / (ms - bpmChronoStart);
         bpmChronoStart = ms;
         if ( temporaryBpm > 30 && temporaryBpm < 200 ) // make sure the BPM is within bounds

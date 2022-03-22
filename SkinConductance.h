@@ -32,6 +32,9 @@
 #include "Lop.h"
 #include "Hip.h"
 
+#include "daisy_seed.h"
+using namespace daisy;
+
 
 #ifndef SKIN_CONDUCTANCE_H_
 #define SKIN_CONDUCTANCE_H_
@@ -41,6 +44,10 @@ class SkinConductance {
 
   // Analog pin the SC sensor is connected to.
   uint8_t _pin;
+  uint8_t _chan;
+
+  DaisySeed *_hw;
+
   int gsrSensorReading;
 
   float gsrSensorFiltered;
@@ -55,12 +62,14 @@ class SkinConductance {
   unsigned long sampleRate;
 
   // Internal use.
-  unsigned long microsBetweenSamples;
-  unsigned long prevSampleMicros;
+  uint32_t microsBetweenSamples;
+  uint32_t prevSampleMicros;
 
 public:
   SkinConductance(uint8_t pin, unsigned long rate=50); // default SC samplerate is 50Hz
   virtual ~SkinConductance() {}
+
+  void Init(DaisySeed *hw, AdcChannelConfig *adcConfig, uint8_t chan);
 
   /// Resets all values.
   void reset();
@@ -86,6 +95,8 @@ public:
   // Performs the actual adjustments of signals and filterings.
   // Internal use: don't use directly, use update() instead.
   void sample();
+
+  float map(float value, float start1, float stop1, float start2, float stop2);
 };
 
 #endif

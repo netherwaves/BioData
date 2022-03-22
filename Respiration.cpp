@@ -38,6 +38,15 @@ respSensorAmplitudeLop(0.001),  // original value 0.001
   respSensorBpmLop(0.001)       // original value 0.001
 {
   setSampleRate(rate);
+}
+
+void Respiration::Init(DaisySeed *hw, AdcChannelConfig *config, uint8_t chan)
+{
+  _hw = hw;
+  _chan = chan;
+
+  config->InitSingle(_hw->GetPin(_pin));
+
   reset();
 }
 
@@ -47,11 +56,11 @@ void Respiration::reset() {
   respSensorAmplitudeLopValueMinMax = MinMax();
   respSensorBpmLopValueMinMax = MinMax();
   respSensorReading = respSensorFiltered = respSensorAmplitude = 0;
-  bpmChronoStart = millis();   // Note that in this case, BPM refers to "breaths per minute"  ;)
+  bpmChronoStart = System::GetNow();   // Note that in this case, BPM refers to "breaths per minute"  ;)
   bpm = 12;
   breath = false;
 
-  prevSampleMicros = micros();
+  prevSampleMicros = System::GetUs();
 
   // Perform one update.
   sample();
@@ -63,7 +72,7 @@ void Respiration::setSampleRate(unsigned long rate) {
 }
 
 void Respiration::update() {
-  unsigned long t = micros();
+  uint32_t t = System::GetUs();
   if (t - prevSampleMicros >= microsBetweenSamples) {
     // Perform updates.
     sample();
@@ -97,8 +106,9 @@ int Respiration::getRaw() const {
 
 void Respiration::sample() {
   // Read analog value if needed.
-  respSensorReading = analogRead(_pin); //this is a dummy read to clear the adc.  This is needed at higher sampling frequencies.
-  respSensorReading = analogRead(_pin);
+  respSensorReading = _hw->adc.GetFloat(_chan) * 1023.f;
+  //respSensorReading = analogRead(_pin); //this is a dummy read to clear the adc.  This is needed at higher sampling frequencies.
+  //respSensorReading = analogRead(_pin);
   
   respSensorFiltered = respMinMax.filter(respSensorReading);
   respSensorAmplitude = respMinMax.getMax() - respMinMax.getMin();
@@ -116,7 +126,7 @@ void Respiration::sample() {
   breath = respThresh.detect(respSensorFiltered);
 
   if ( breath ) {
-    unsigned long ms = millis();
+    uint32_t ms = System::GetNow();
     float temporaryBpm = 60000. / (ms - bpmChronoStart);  // divide by 60 seconds
     bpmChronoStart = ms;
     if ( temporaryBpm > 3 && temporaryBpm < 60 ) { // make sure the BPM is within bounds

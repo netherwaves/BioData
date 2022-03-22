@@ -29,6 +29,10 @@
  */
 #include "SkinConductance.h"
 
+#include <algorithm>
+#include <math.h>
+using namespace std;
+
 
 float alpha_1 = 0.01;
 float alpha_2 = 0.005;
@@ -37,6 +41,15 @@ SkinConductance::SkinConductance(uint8_t pin, unsigned long rate) :
   _pin(pin)
 {
   setSampleRate(rate);
+}
+
+void SkinConductance::Init(DaisySeed *hw, AdcChannelConfig *adcConfig, uint8_t chan)
+{
+  _hw = hw;
+  _chan = chan;
+
+  adcConfig->InitSingle(hw->GetPin(_pin));
+
   reset();
 }
 
@@ -49,7 +62,7 @@ void SkinConductance::reset() {
   gsrSensorLopassed = 0;
   gsrSensorChangeFiltered = 0;
 
-  prevSampleMicros = micros();
+  prevSampleMicros = System::GetUs();
 
   // Perform one update.
   sample();
@@ -61,7 +74,7 @@ void SkinConductance::setSampleRate(unsigned long rate) {
 }
 
 void SkinConductance::update() {
-  unsigned long t = micros();
+  unsigned long t = System::GetUs();
   if (t - prevSampleMicros >= microsBetweenSamples) {
     // Perform updates.
     sample();
@@ -83,8 +96,9 @@ int SkinConductance::getRaw() const {
 
 void SkinConductance::sample() {
     // Read sensor value and invert it.
-    gsrSensorReading = 1023 - analogRead(_pin); //this is a dummy read to clear the adc.  This is needed at higher sampling frequencies.
-    gsrSensorReading = 1023 - analogRead(_pin);
+    gsrSensorReading = 1023.f - (_hw->adc.GetFloat(_chan) * 1023.f);
+    // gsrSensorReading = 1023 - analogRead(_pin); //this is a dummy read to clear the adc.  This is needed at higher sampling frequencies.
+    // gsrSensorReading = 1023 - analogRead(_pin);
     // Smooth out the signals that you compare to one another and map between 0 and 1000
 
     gsrSensorLop = alpha_1*gsrSensorReading + (1 - alpha_1)*gsrSensorLop;
@@ -94,6 +108,11 @@ void SkinConductance::sample() {
 
     gsrSensorLopFiltered = map(gsrSensorLop, 0, 1023, 0, 1000)*0.001;
 
-    gsrSensorChange = constrain(gsrSensorChange, 0, 1);
+    gsrSensorChange = min(max(gsrSensorChange, 0.f), 1.f);
 
+}
+
+float map(float value, float start1, float stop1, float start2, float stop2)
+{
+  return start2 + (stop2 - start2) * ((value - start1) / (stop1 - start1));
 }

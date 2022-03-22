@@ -26,6 +26,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "daisy_seed.h"
+
+using namespace daisy;
+
 #include "Average.h"
 #include "MinMax.h"
 #include "Threshold.h"
@@ -38,8 +42,11 @@ class Heart {
     
     // Analog pin the Heart sensor is connected to.
     uint8_t _pin;
+    uint8_t _chan;
+
+    DaisySeed *_hw;
     
-    unsigned long bpmChronoStart;
+    uint32_t bpmChronoStart;
     
     MinMax heartMinMax;
     Threshold heartThresh;
@@ -73,12 +80,14 @@ class Heart {
     unsigned long sampleRate;
     
     // Internal use.
-    unsigned long microsBetweenSamples;
-    unsigned long prevSampleMicros;
+    uint32_t microsBetweenSamples;
+    uint32_t prevSampleMicros;
     
 public:
     Heart(uint8_t pin, unsigned long rate=200); // default samplerate is 200Hz
     virtual ~Heart() {}
+
+    void Init(DaisySeed *hw, AdcChannelConfig *adcConfig, uint8_t chan);
     
     void setAmplitudeSmoothing(float smoothing);
     void setBpmSmoothing(float smoothing);
